@@ -14,6 +14,14 @@ _time_prev = time.time() * 1000.0
 _fps = dsp.ExpFilter(val=config.FPS, alpha_decay=0.2, alpha_rise=0.2)
 """The low-pass filter used to estimate frames-per-second"""
 
+global WheelPosition
+WheelPosition = 0
+
+global silent_timeout
+silent_timeout = 0
+
+global brigh
+brigh = 0
 
 def frames_per_second():
     """Return the estimated frames per second
@@ -189,20 +197,36 @@ prev_fps_update = time.time()
 
 
 def microphone_update(audio_samples):
-    global y_roll, prev_rms, prev_exp, prev_fps_update
+    global y_roll, prev_rms, prev_exp, prev_fps_update, WheelPosition, silent_timeout, brigh
     # Normalize samples between 0 and 1
     y = audio_samples / 2.0**15
     # Construct a rolling window of audio samples
     y_roll[:-1] = y_roll[1:]
     y_roll[-1, :] = np.copy(y)
     y_data = np.concatenate(y_roll, axis=0).astype(np.float32)
-    
     vol = np.max(np.abs(y_data))
     if vol < config.MIN_VOLUME_THRESHOLD:
-        print('No audio input. Volume below threshold. Volume:', vol)
-        led.pixels = np.tile(0, (3, config.N_PIXELS))
+        #print('No audio input. Volume below threshold. Volume:', vol)
+        if WheelPosition < 256:
+            r_fact,g_fact,b_fact = Wheel(WheelPosition)
+            WheelPosition += 1
+        else:
+            WheelPosition = 0
+            r_fact,g_fact,b_fact = Wheel(WheelPosition)
+        r = np.ones((60,), dtype=int)*r_fact*brigh/400
+        g = np.ones((60,), dtype=int)*g_fact*brigh/400
+        b = np.ones((60,), dtype=int)*b_fact*brigh/400
+        led.pixels = np.array([r,g,b])
         led.update()
+
+        if silent_timeout > 0:
+            silent_timeout -= 1
+        elif brigh < 400:
+            brigh += 1
+
     else:
+        silent_timeout = 40
+        brigh = 0
         # Transform audio input into the frequency domain
         N = len(y_data)
         N_zeros = 2**int(np.ceil(np.log2(N))) - N
@@ -248,9 +272,8 @@ samples_per_frame = int(config.MIC_RATE / config.FPS)
 # Array containing the rolling audio sample window
 y_roll = np.random.rand(config.N_ROLLING_HISTORY, samples_per_frame) / 1e16
 
-visualization_effect = visualize_spectrum
+visualization_effect = visualize_energy
 """Visualization effect to display on the LED strip"""
-
 
 if __name__ == '__main__':
     if config.USE_GUI:
