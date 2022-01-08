@@ -18,7 +18,7 @@ to control the leds connected to it.
 """
 
 if DEVICE == 'esp8266':
-    UDP_IP = '192.168.0.150'
+    UDP_IP = '192.168.100.150'
     """IP address of the ESP8266. Must match IP in ws2812_controller.ino"""
     UDP_PORT = 7777
     """Port number used for socket communication between Python and ESP8266"""
@@ -98,8 +98,8 @@ number of bins. More bins is not always better!
 There is no point using more bins than there are pixels on the LED strip.
 """
 
-N_ROLLING_HISTORY = 2
+N_ROLLING_HISTORY = 7
 """Number of past audio frames to include in the rolling window"""
 
-MIN_VOLUME_THRESHOLD = 1e-7
+MIN_VOLUME_THRESHOLD = 1e-5
 """No music visualization displayed if recorded audio volume below threshold"""
